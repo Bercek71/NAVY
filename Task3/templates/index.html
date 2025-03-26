@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hopfield Network Pattern</title>
+    <style>
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(10, 30px);
+            grid-template-rows: repeat(10, 30px);
+            gap: 1px;
+        }
+        .cell {
+            width: 30px;
+            height: 30px;
+            border: 1px solid #ddd;
+            background-color: white;
+            cursor: pointer;
+        }
+        .cell.active {
+            background-color: black;
+        }
+        button {
+            margin-top: 20px;
+        }
+        .container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Hopfield Network Pattern</h1>
+
+        <!-- Grid for drawing patterns -->
+        <div id="grid" class="grid">
+            <!-- Grid cells will be created by JavaScript -->
+        </div>
+        <div style="display: flex; justify-content: center; flex-wrap: wrap;">
+        <button onclick="savePattern()">Save Pattern</button>
+        <button onclick="recoverPattern('sync')">Attempt Recovery sync</button>
+        <button onclick="recoverPattern('async')">Attempt Recovery async</button>
+
+        <button onclick="clearGrid()">Reset</button>
+        </div>
+        <div>
+            <h3>Recovered Pattern</h3>
+            <div id="recoveredGrid" class="grid"></div>
+        </div>
+    </div>
+
+    <script>
+        const gridSize = 10;  // 10x10 grid
+        let grid = [];
+        let recoveredGrid = [];
+
+        function clearGrid() {
+            const cells = document.getElementsByClassName('cell');
+            for (let i = 0; i < cells.length; i++) {
+                cells[i].classList.remove('active');
+            }
+            grid = [];
+        }
+
+        // Initialize the grid and draw cells
+        function initGrid() {
+            const gridContainer = document.getElementById('grid');
+            for (let i = 0; i < gridSize * gridSize; i++) {
+                const cell = document.createElement('div');
+                cell.classList.add('cell');
+                cell.addEventListener('click', () => toggleCell(cell, i));
+                gridContainer.appendChild(cell);
+            }
+        }
+
+        // Toggle cell between active and inactive (1/0)
+        function toggleCell(cell, index) {
+            cell.classList.toggle('active');
+            const row = Math.floor(index / gridSize);
+            const col = index % gridSize;
+            grid[row] = grid[row] || [];
+            grid[row][col] = grid[row][col] === 1 ? 0 : 1;  // Toggle between 1 (black) and 0 (white)
+        }
+
+        // Save the pattern to the Flask backend
+        function savePattern() {
+            const pattern = [];
+            for (let row = 0; row < gridSize; row++) {
+                for (let col = 0; col < gridSize; col++) {
+                    const cell = document.getElementsByClassName('cell')[row * gridSize + col];
+                    pattern.push(cell.classList.contains('active') ? 1 : 0);
+                }
+            }
+
+            // Send the pattern to the server for saving and training
+            fetch('/save_pattern', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ pattern: pattern })
+            });
+        }
+
+        // Recover the pattern from the Flask backend
+        function recoverPattern(how) {
+            const noisyPattern = [];
+            for (let row = 0; row < gridSize; row++) {
+                for (let col = 0; col < gridSize; col++) {
+                    const cell = document.getElementsByClassName('cell')[row * gridSize + col];
+                    noisyPattern.push(cell.classList.contains('active') ? 1 : 0);
+                }
+            }
+
+            // Send the noisy pattern to the server for recovery
+            fetch('/recover_pattern', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ pattern: noisyPattern })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if(how === "sync"){
+                drawRecoveredPattern(data.recovered_sync, 'recoveredGrid');
+                } else {
+                drawRecoveredPattern(data.recovered_async, 'recoveredGrid');
+                }
+            });
+        }
+
+        // Draw recovered pattern on the grid
+        function drawRecoveredPattern(pattern, gridId) {
+            const recoveredGridContainer = document.getElementById(gridId);
+            recoveredGridContainer.innerHTML = '';  // Clear previous recovered pattern
+
+            for (let i = 0; i < pattern.length; i++) {
+                const cell = document.createElement('div');
+                cell.classList.add('cell');
+                if (pattern[i] === 1) {
+                    cell.classList.add('active');
+                }
+                recoveredGridContainer.appendChild(cell);
+            }
+        }
+
+        // Initialize the grid on page load
+        window.onload = initGrid;
+    </script>
+</body>
+</html>
