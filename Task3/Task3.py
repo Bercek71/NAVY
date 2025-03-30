@@ -32,7 +32,7 @@ class HopfieldNetwork:
         energy = -0.5 * np.sum(np.dot(self.weights, pattern) * pattern)
         return energy
 
-    def recover_async(self, input_pattern, max_iter=100, energy_threshold=0.0, patience=10):
+    def recover_sync(self, input_pattern, max_iter=100, energy_threshold=0.0, patience=10):
         """
         Asynchronní obnova vzoru
         :param input_pattern: vstpní rozbitý vzor
@@ -50,14 +50,12 @@ class HopfieldNetwork:
                 sum = np.dot(self.weights[i], input_pattern)
                 input_pattern[i] = 1 if sum >= 0 else -1
 
-            # Check if the energy has changed
             curr_energy = self.energy(input_pattern)
             if np.abs(curr_energy - prev_energy) < energy_threshold:
                 stable_count += 1
             else:
                 stable_count = 0
 
-            # If energy hasn't changed for 'patience' iterations, stop
             if stable_count >= patience:
                 break
 
@@ -65,7 +63,7 @@ class HopfieldNetwork:
 
         return (input_pattern + 1) // 2  # Convert back to 0/1
 
-    def recover_sync(self, input_pattern, max_iter=100, energy_threshold=0.0, patience=10):
+    def recover_async(self, input_pattern, max_iter=100, energy_threshold=0.0, patience=10):
         """
         Synchronní obnova vzoru
         :param input_pattern:
@@ -109,9 +107,7 @@ def save_pattern():
     pattern = request.json['pattern']
     patterns.append(pattern)
 
-    if hopfield is None:
-        hopfield = HopfieldNetwork(len(pattern))
-
+    hopfield = HopfieldNetwork(len(pattern))
     hopfield.train(patterns)
 
     return jsonify({"status": "success"})
