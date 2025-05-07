@@ -1,8 +1,4 @@
 import time
-
-
-
-
 import numpy as np
 from tensorflow import keras
 from keras.models import Sequential
@@ -47,6 +43,7 @@ class NeuralNetwork:
             Dense(128, activation='relu'),
             BatchNormalization(),
             Dense(64, activation='relu'),
+            # sigmoid protože predikujeme hodnotu mezi 0 a 1
             Dense(1, activation='sigmoid')
         ])
 
